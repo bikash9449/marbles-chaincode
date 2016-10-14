@@ -42,18 +42,21 @@ type Marble struct{
 	Color string `json:"color"`
 	Size int `json:"size"`
 	User string `json:"user"`
+	Tampered string `json:"tampered"`
 }
 
-type Description struct{
-	Color string `json:"color"`
-	Size int `json:"size"`
-}
+//type Description struct{
+//	Color string `json:"color"`
+//	Size int `json:"size"`
+//}
 
 type AnOpenTrade struct{
 	User string `json:"user"`					//user who created the open trade order
 	Timestamp int64 `json:"timestamp"`			//utc timestamp of creation
-	Want Description  `json:"want"`				//description of desired marble
-	Willing []Description `json:"willing"`		//array of marbles willing to trade away
+	//Want Description  `json:"want"`				//description of desired marble
+	//Willing []Description `json:"willing"`		//array of marbles willing to trade away
+	Willing string `json:"willing"`			//bikash
+	Charge int `json:"charge"`
 }
 
 type AllTrades struct{
@@ -254,9 +257,10 @@ func (t *SimpleChaincode) Write(stub *shim.ChaincodeStub, args []string) ([]byte
 // ============================================================================================================================
 func (t *SimpleChaincode) init_marble(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var err error
+	var err2 error
 
-	//   0       1       2     3
-	// "asdf", "blue", "35", "bob"
+	//   0       1       2     3	 4
+	// "asdf", "blue", "35", "bob", "0"
 	if len(args) != 4 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 4")
 	}
@@ -279,8 +283,12 @@ func (t *SimpleChaincode) init_marble(stub *shim.ChaincodeStub, args []string) (
 	color := strings.ToLower(args[1])
 	user := strings.ToLower(args[3])
 	size, err := strconv.Atoi(args[2])
+	tempered, err2 := strconv.Atoi(args[3])
 	if err != nil {
 		return nil, errors.New("3rd argument must be a numeric string")
+	}
+	if err2 != nil {
+		return nil, errors.New("4th argument must be a numeric string")
 	}
 
 	//check if marble already exists
@@ -297,7 +305,7 @@ func (t *SimpleChaincode) init_marble(stub *shim.ChaincodeStub, args []string) (
 	}
 	
 	//build the marble json string manually
-	str := `{"name": "` + name + `", "color": "` + color + `", "size": ` + strconv.Itoa(size) + `, "user": "` + user + `"}`
+	str := `{"name": "` + name + `", "color": "` + color + `", "size": ` + strconv.Itoa(size) + `, "user": "` + user + `", "tempered": "` + strconv.Itoa(tempered) + `"}`
 	err = stub.PutState(name, []byte(str))									//store marble with id as key
 	if err != nil {
 		return nil, err
@@ -358,19 +366,19 @@ func (t *SimpleChaincode) set_user(stub *shim.ChaincodeStub, args []string) ([]b
 // ============================================================================================================================
 func (t *SimpleChaincode) open_trade(stub *shim.ChaincodeStub, args []string) ([]byte, error) {
 	var err error
-	var will_size int
-	var trade_away Description
+	//var will_size int
+	//var trade_away string
 	
-	//	0        1      2     3      4      5       6
-	//["bob", "blue", "16", "red", "16"] *"blue", "35*
-	if len(args) < 5 {
-		return nil, errors.New("Incorrect number of arguments. Expecting like 5?")
+	//  0        1        2     
+	//["bob", "name/id", "charges"]
+	if len(args) < 3 {
+		return nil, errors.New("Incorrect number of arguments. Expecting like 3")
 	}
-	if len(args)%2 == 0{
+	/*if len(args)%2 == 0{
 		return nil, errors.New("Incorrect number of arguments. Expecting an odd number")
-	}
+	}*/
 
-	size1, err := strconv.Atoi(args[2])
+	charge1, err := strconv.Atoi(args[2])
 	if err != nil {
 		return nil, errors.New("3rd argument must be a numeric string")
 	}
@@ -378,13 +386,15 @@ func (t *SimpleChaincode) open_trade(stub *shim.ChaincodeStub, args []string) ([
 	open := AnOpenTrade{}
 	open.User = args[0]
 	open.Timestamp = makeTimestamp()											//use timestamp as an ID
-	open.Want.Color = args[1]
-	open.Want.Size =  size1
+	//open.Want.Color = args[1]
+	//open.Want.Size =  size1
+	open.Willing = args[1]
+	open.Charge = charge1
 	fmt.Println("- start open trade")
 	jsonAsBytes, _ := json.Marshal(open)
 	err = stub.PutState("_debug1", jsonAsBytes)
 
-	for i:=3; i < len(args); i++ {												//create and append each willing trade
+	/*for i:=3; i < len(args); i++ {												//create and append each willing trade
 		will_size, err = strconv.Atoi(args[i + 1])
 		if err != nil {
 			msg := "is not a numeric string " + args[i + 1]
@@ -402,7 +412,7 @@ func (t *SimpleChaincode) open_trade(stub *shim.ChaincodeStub, args []string) ([
 		open.Willing = append(open.Willing, trade_away)
 		fmt.Println("! appended willing to open")
 		i++;
-	}
+	}*/
 	
 	//get the open trade struct
 	tradesAsBytes, err := stub.GetState(openTradesStr)
@@ -431,6 +441,8 @@ func (t *SimpleChaincode) perform_trade(stub *shim.ChaincodeStub, args []string)
 	
 	//	0		1					2					3				4					5
 	//[data.id, data.closer.user, data.closer.name, data.opener.user, data.opener.color, data.opener.size]
+	//	0		1		2		   3		    4
+	//[data.id, data.opener.user, data.opener.willing, data.opener.charges, data.closer]
 	if len(args) < 6 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 6")
 	}
@@ -441,9 +453,9 @@ func (t *SimpleChaincode) perform_trade(stub *shim.ChaincodeStub, args []string)
 		return nil, errors.New("1st argument must be a numeric string")
 	}
 	
-	size, err := strconv.Atoi(args[5])
+	charge, err := strconv.Atoi(args[3])
 	if err != nil {
-		return nil, errors.New("6th argument must be a numeric string")
+		return nil, errors.New("4th argument must be a numeric string")
 	}
 	
 	//get the open trade struct
@@ -460,7 +472,7 @@ func (t *SimpleChaincode) perform_trade(stub *shim.ChaincodeStub, args []string)
 			fmt.Println("found the trade");
 			
 			
-			marbleAsBytes, err := stub.GetState(args[2])
+			/*marbleAsBytes, err := stub.GetState(args[2])
 			if err != nil {
 				return nil, errors.New("Failed to get thing")
 			}
@@ -473,8 +485,8 @@ func (t *SimpleChaincode) perform_trade(stub *shim.ChaincodeStub, args []string)
 				fmt.Println(msg)
 				return nil, errors.New(msg)
 			}
-			
-			marble, e := findMarble4Trade(stub, trades.OpenTrades[i].User, args[4], size)			//find a marble that is suitable from opener
+			*/
+			/*marble, e := findMarble4Trade(stub, trades.OpenTrades[i].User, args[4], size)			//find a marble that is suitable from opener
 			if(e == nil){
 				fmt.Println("! no errors, proceeding")
 
@@ -486,6 +498,15 @@ func (t *SimpleChaincode) perform_trade(stub *shim.ChaincodeStub, args []string)
 				err = stub.PutState(openTradesStr, jsonAsBytes)										//rewrite open orders
 				if err != nil {
 					return nil, err
+				}
+			*/
+			//BIKASH
+			t.set_user(stub, []string{args[2],args[4]})
+			trades.OpenTrades = append(trades.OpenTrades[:i], trades.OpenTrades[i+1:]...)		//remove trade
+			jsonAsBytes, _ := json.Marshal(trades)
+			err = stub.PutState(openTradesStr, jsonAsBytes)										//rewrite open orders
+			if err != nil {
+				return nil, err
 				}
 			}
 		}
