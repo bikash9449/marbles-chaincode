@@ -453,10 +453,10 @@ func (t *SimpleChaincode) perform_trade(stub *shim.ChaincodeStub, args []string)
 		return nil, errors.New("1st argument must be a numeric string")
 	}
 	
-	charge, err := strconv.Atoi(args[3])
+	/*charge, err := strconv.Atoi(args[3])
 	if err != nil {
 		return nil, errors.New("4th argument must be a numeric string")
-	}
+	}*///bikash
 	
 	//get the open trade struct
 	tradesAsBytes, err := stub.GetState(openTradesStr)
