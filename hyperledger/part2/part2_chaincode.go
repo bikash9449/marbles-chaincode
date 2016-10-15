@@ -623,8 +623,28 @@ func cleanTrades(stub *shim.ChaincodeStub)(err error){
 	fmt.Println("# trades " + strconv.Itoa(len(trades.OpenTrades)))
 	for i:=0; i<len(trades.OpenTrades); {																		//iter over all the known open trades
 		fmt.Println(strconv.Itoa(i) + ": looking at trade " + strconv.FormatInt(trades.OpenTrades[i].Timestamp, 10))
+		marbleAsBytes, err := stub.GetState(trades.OpenTrades[i].Willing)
+		if err != nil {
+			return nil, errors.New("Failed to get thing")
+		}
+		res := Marble{}
+		json.Unmarshal(marbleAsBytes, &res)										//un stringify it aka JSON.parse()
+					
+		if trades.OpenTrades[i].User!=res.User{
+			fmt.Println("! errors with this option, removing option")
+			trades.OpenTrades = append(trades.OpenTrades[:i], trades.OpenTrades[i+1:]...)				//remove this trade
+			didWork = true
+			i--;
+		}else{
+			fmt.Println("! this option is fine")
+		}
+		i++
+		fmt.Println("! i:" + strconv.Itoa(i))
+		if i >= len(trades.OpenTrades) {																	//things might have shifted, recalcuate
+			break
+		}
 		
-		fmt.Println("# options " + strconv.Itoa(len(trades.OpenTrades[i].Willing)))
+		/*fmt.Println("# options " + strconv.Itoa(len(trades.OpenTrades[i].Willing)))
 		for x:=0; x<len(trades.OpenTrades[i].Willing); {														//find a marble that is suitable
 			fmt.Println("! on next option " + strconv.Itoa(i) + ":" + strconv.Itoa(x))
 			_, e := findMarble4Trade(stub, trades.OpenTrades[i].User, trades.OpenTrades[i].Willing[x].Color, trades.OpenTrades[i].Willing[x].Size)
@@ -642,9 +662,9 @@ func cleanTrades(stub *shim.ChaincodeStub)(err error){
 			if x >= len(trades.OpenTrades[i].Willing) {														//things might have shifted, recalcuate
 				break
 			}
-		}
+		}*/
 		
-		if len(trades.OpenTrades[i].Willing) == 0 {
+		/*if len(trades.OpenTrades[i].Willing) == 0 {
 			fmt.Println("! no more options for this trade, removing trade")
 			didWork = true
 			trades.OpenTrades = append(trades.OpenTrades[:i], trades.OpenTrades[i+1:]...)					//remove this trade
@@ -656,6 +676,7 @@ func cleanTrades(stub *shim.ChaincodeStub)(err error){
 		if i >= len(trades.OpenTrades) {																	//things might have shifted, recalcuate
 			break
 		}
+		*/
 	}
 
 	if(didWork){
