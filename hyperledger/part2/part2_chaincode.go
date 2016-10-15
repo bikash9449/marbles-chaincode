@@ -508,7 +508,7 @@ func (t *SimpleChaincode) perform_trade(stub *shim.ChaincodeStub, args []string)
 			if err != nil {
 				return nil, err
 				}
-			}
+			
 		}
 	}
 	fmt.Println("- end close trade")
