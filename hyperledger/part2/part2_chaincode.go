@@ -261,7 +261,7 @@ func (t *SimpleChaincode) init_marble(stub *shim.ChaincodeStub, args []string) (
 
 	//   0       1       2     3	 4
 	// "asdf", "blue", "35", "bob", "0"
-	if len(args) != 4 {
+	if len(args) != 5 {
 		return nil, errors.New("Incorrect number of arguments. Expecting 4")
 	}
 
@@ -279,6 +279,9 @@ func (t *SimpleChaincode) init_marble(stub *shim.ChaincodeStub, args []string) (
 	if len(args[3]) <= 0 {
 		return nil, errors.New("4th argument must be a non-empty string")
 	}
+	if len(args[4]) <= 0 {
+		return nil, errors.New("4th argument must be a non-empty string")
+	}
 	name := args[0]
 	color := strings.ToLower(args[1])
 	user := strings.ToLower(args[3])
@@ -288,7 +291,7 @@ func (t *SimpleChaincode) init_marble(stub *shim.ChaincodeStub, args []string) (
 		return nil, errors.New("3rd argument must be a numeric string")
 	}
 	if err2 != nil {
-		return nil, errors.New("4th argument must be a numeric string")
+		return nil, errors.New("5th argument must be a numeric string")
 	}
 
 	//check if marble already exists
@@ -305,7 +308,7 @@ func (t *SimpleChaincode) init_marble(stub *shim.ChaincodeStub, args []string) (
 	}
 	
 	//build the marble json string manually
-	str := `{"name": "` + name + `", "color": "` + color + `", "size": ` + strconv.Itoa(size) + `, "user": "` + user + `", "tempered": "` + strconv.Itoa(tempered) + `"}`
+	str := `{"name": "` + name + `", "color": "` + color + `", "size": ` + strconv.Itoa(size) + `, "user": "` + user + `", "tempered": ` + strconv.Itoa(tempered) + `}`
 	err = stub.PutState(name, []byte(str))									//store marble with id as key
 	if err != nil {
 		return nil, err
