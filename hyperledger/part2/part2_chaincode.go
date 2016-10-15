@@ -625,7 +625,7 @@ func cleanTrades(stub *shim.ChaincodeStub)(err error){
 		fmt.Println(strconv.Itoa(i) + ": looking at trade " + strconv.FormatInt(trades.OpenTrades[i].Timestamp, 10))
 		marbleAsBytes, err := stub.GetState(trades.OpenTrades[i].Willing)
 		if err != nil {
-			return nil, errors.New("Failed to get thing")
+			return nil
 		}
 		res := Marble{}
 		json.Unmarshal(marbleAsBytes, &res)										//un stringify it aka JSON.parse()
