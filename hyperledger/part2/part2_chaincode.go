@@ -446,8 +446,8 @@ func (t *SimpleChaincode) perform_trade(stub *shim.ChaincodeStub, args []string)
 	//[data.id, data.closer.user, data.closer.name, data.opener.user, data.opener.color, data.opener.size]
 	//	0		1		2		   3		    4
 	//[data.id, data.opener.user, data.opener.willing, data.opener.charges, data.closer]
-	if len(args) < 6 {
-		return nil, errors.New("Incorrect number of arguments. Expecting 6")
+	if len(args) < 5 {
+		return nil, errors.New("Incorrect number of arguments. Expecting 5")
 	}
 	
 	fmt.Println("- start close trade")
